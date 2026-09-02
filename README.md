@@ -86,7 +86,7 @@ Novos clientes também podem se cadastrar sozinhos pela tela `/cadastro`.
 
 - **Cliente**: só enxerga os próprios chamados; não vê notas internas; não pode transferir, mudar status/prioridade nem assumir chamado.
 - **Agente**: enxerga os chamados do **seu setor**; pode responder, assumir, transferir, mudar status/prioridade e escrever notas internas.
-- **Admin**: enxerga e gerencia **todos** os chamados, de todos os setores.
+- **Admin**: enxerga e gerencia **todos** os chamados, de todos os setores, consegue visualizar tempo e qual responsavel esta pelo chamado.
 
 ## Como adicionar um novo setor ou assunto pré-pronto
 
