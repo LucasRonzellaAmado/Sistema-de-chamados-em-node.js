@@ -1,0 +1,56 @@
+<% tituloPagina = 'Abrir chamado' %>
+<% secaoAtiva = 'novo' %>
+<%- include('../_header') %>
+
+<div class="cabecalho-pagina">
+  <h1>Abrir novo chamado</h1>
+</div>
+
+<% if (erro) { %>
+  <div class="alerta alerta-erro"><%= erro %></div>
+<% } %>
+
+<form action="/chamados/novo" method="POST" enctype="multipart/form-data" class="formulario-card">
+
+  <label for="setor_id">Setor</label>
+  <select id="setor_id" name="setor_id" required>
+    <option value="">Selecione o setor...</option>
+    <% setores.forEach(s => { %>
+      <option value="<%= s.id %>"><%= s.nome %> — <%= s.descricao %></option>
+    <% }) %>
+  </select>
+
+  <label for="assunto_predefinido">Assunto</label>
+  <select id="assunto_predefinido" name="assunto_predefinido">
+    <option value="">Selecione o setor primeiro...</option>
+  </select>
+
+  <div id="campo-assunto-customizado" style="display:none;">
+    <label for="titulo_customizado">Descreva o assunto</label>
+    <input type="text" id="titulo_customizado" name="titulo_customizado" placeholder="Ex: Sistema de vendas não carrega">
+  </div>
+
+  <label for="prioridade">Prioridade</label>
+  <select id="prioridade" name="prioridade">
+    <option value="baixa">Baixa</option>
+    <option value="media" selected>Média</option>
+    <option value="alta">Alta</option>
+    <option value="urgente">Urgente</option>
+  </select>
+
+  <label for="descricao">Descreva o que está acontecendo</label>
+  <textarea id="descricao" name="descricao" rows="6" required placeholder="Explique com detalhes o problema: quando começou, o que você já tentou fazer, mensagens de erro, etc."></textarea>
+
+  <label for="anexos">Documentação / prints (opcional)</label>
+  <input type="file" id="anexos" name="anexos" multiple>
+  <small>Você pode anexar até 5 arquivos (prints, PDFs, documentos etc).</small>
+
+  <button type="submit" class="botao botao-primario"><i class="fa-solid fa-paper-plane"></i> Abrir chamado</button>
+</form>
+
+<script>
+  const TODOS_ASSUNTOS = <%- JSON.stringify(assuntos) %>;
+</script>
+<script src="/js/novo-chamado.js"></script>
+
+<%- include('../_footer') %>

@@ -1,0 +1,62 @@
+<% tituloPagina = usuarioLogado.tipo === 'cliente' ? 'Meus chamados' : 'Chamados do setor' %>
+<% secaoAtiva = 'lista' %>
+<%- include('../_header') %>
+
+<div class="cabecalho-pagina">
+  <h1><%= usuarioLogado.tipo === 'cliente' ? 'Meus chamados' : 'Chamados do setor' %></h1>
+  <a href="/chamados/novo" class="botao botao-primario"><i class="fa-solid fa-plus"></i> Abrir novo chamado</a>
+</div>
+
+<div class="filtros">
+  <a href="/chamados" class="filtro <%= !filtroStatus ? 'ativo' : '' %>">Todos</a>
+  <a href="/chamados?status=aberto" class="filtro <%= filtroStatus === 'aberto' ? 'ativo' : '' %>">Abertos</a>
+  <a href="/chamados?status=em_andamento" class="filtro <%= filtroStatus === 'em_andamento' ? 'ativo' : '' %>">Em andamento</a>
+  <a href="/chamados?status=aguardando_cliente" class="filtro <%= filtroStatus === 'aguardando_cliente' ? 'ativo' : '' %>">Aguardando cliente</a>
+  <a href="/chamados?status=resolvido" class="filtro <%= filtroStatus === 'resolvido' ? 'ativo' : '' %>">Resolvidos</a>
+  <a href="/chamados?status=fechado" class="filtro <%= filtroStatus === 'fechado' ? 'ativo' : '' %>">Fechados</a>
+</div>
+
+<% if (chamados.length === 0) { %>
+  <p class="vazio">Nenhum chamado encontrado.</p>
+<% } else { %>
+<div class="tabela-wrapper">
+  <table class="tabela">
+    <thead>
+      <tr>
+        <th>Protocolo</th>
+        <th>Assunto</th>
+        <th>Setor</th>
+        <% if (usuarioLogado.tipo !== 'cliente') { %><th>Cliente</th><% } %>
+        <th>Responsável</th>
+        <th>Prioridade</th>
+        <th>Status</th>
+        <% if (usuarioLogado.tipo === 'admin') { %>
+          <th>Tempo p/ assumir</th>
+          <th>Tempo total</th>
+        <% } %>
+        <th>Atualizado em</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% chamados.forEach(c => { %>
+        <tr onclick="window.location='/chamados/<%= c.id %>'" class="linha-clicavel">
+          <td><strong><%= c.protocolo %></strong></td>
+          <td><%= c.titulo %></td>
+          <td><%= c.setor_nome %></td>
+          <% if (usuarioLogado.tipo !== 'cliente') { %><td><%= c.cliente_nome %></td><% } %>
+          <td><%= c.responsavel_nome || '—' %></td>
+          <td><span class="etiqueta prioridade-<%= c.prioridade %>"><%= c.prioridade %></span></td>
+          <td><span class="etiqueta status-<%= c.status %>"><%= STATUS_LABEL[c.status] %></span></td>
+          <% if (usuarioLogado.tipo === 'admin') { %>
+            <td><%= c.tempoParaAssumir || '—' %></td>
+            <td><%= c.tempoTotal %></td>
+          <% } %>
+          <td><%= new Date(c.atualizado_em).toLocaleString('pt-BR') %></td>
+        </tr>
+      <% }) %>
+    </tbody>
+  </table>
+</div>
+<% } %>
+
+<%- include('../_footer') %>

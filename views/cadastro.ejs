@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Criar conta :: Painel de Chamados</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/estilo.css">
+</head>
+<body class="pagina-login">
+  <div class="caixa-login">
+    <div class="marca-login">
+      <i class="fa-solid fa-user-plus"></i>
+      <h1>Criar conta de cliente</h1>
+    </div>
+    <p class="subtitulo">Cadastre-se para abrir chamados com o TI</p>
+
+    <% if (erro) { %>
+      <div class="alerta alerta-erro"><i class="fa-solid fa-triangle-exclamation"></i> <%= erro %></div>
+    <% } %>
+
+    <form action="/cadastro" method="POST">
+      <label for="nome">Nome completo</label>
+      <input type="text" id="nome" name="nome" required autofocus>
+
+      <label for="email">E-mail</label>
+      <input type="email" id="email" name="email" required>
+
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" name="senha" required minlength="4">
+
+      <button type="submit" class="botao botao-primario botao-bloco">Criar conta</button>
+    </form>
+
+    <p class="rodape-login">Ja tem conta? <a href="/login">Fazer login</a></p>
+  </div>
+</body>
+</html>

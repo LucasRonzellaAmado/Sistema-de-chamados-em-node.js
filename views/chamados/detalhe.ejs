@@ -1,0 +1,154 @@
+<% tituloPagina = chamado.protocolo + ' - ' + chamado.titulo %>
+<% secaoAtiva = 'lista' %>
+<%- include('../_header') %>
+
+<div class="cabecalho-pagina">
+  <div>
+    <h1><%= chamado.protocolo %> — <%= chamado.titulo %></h1>
+    <p class="meta-chamado">
+      Setor: <strong><%= chamado.setor_nome %></strong> ·
+      Cliente: <strong><%= chamado.cliente_nome %></strong> ·
+      Responsável: <strong><%= chamado.responsavel_nome || 'Ninguém assumiu ainda' %></strong>
+    </p>
+  </div>
+  <div class="etiquetas-cabecalho">
+    <span class="etiqueta prioridade-<%= chamado.prioridade %>"><%= chamado.prioridade %></span>
+    <span class="etiqueta status-<%= chamado.status %>"><%= STATUS_LABEL[chamado.status] %></span>
+  </div>
+</div>
+
+<div class="layout-detalhe">
+
+  <div class="coluna-principal">
+
+    <div class="card">
+      <h3>Descrição do problema</h3>
+      <p class="descricao-original"><%= chamado.descricao %></p>
+    </div>
+
+    <% if (anexos.length > 0) { %>
+    <div class="card">
+      <h3>Documentação anexada</h3>
+      <ul class="lista-anexos">
+        <% anexos.forEach(a => { %>
+          <li>
+            <i class="fa-solid fa-paperclip"></i> <a href="/uploads/<%= a.caminho_arquivo %>" target="_blank"><%= a.nome_original %></a>
+            <small>enviado por <%= a.usuario_nome %></small>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+    <% } %>
+
+    <div class="card">
+      <h3>Conversa</h3>
+      <div class="timeline-mensagens">
+        <% if (mensagens.length === 0) { %>
+          <p class="vazio">Nenhuma mensagem ainda.</p>
+        <% } %>
+        <% mensagens.forEach(m => { %>
+          <div class="mensagem <%= m.interna ? 'mensagem-interna' : '' %> <%= m.usuario_id === usuarioLogado.id ? 'mensagem-propria' : '' %>">
+            <div class="mensagem-cabecalho">
+              <strong><%= m.usuario_nome %></strong>
+              <span class="tag-tipo-usuario"><%= m.usuario_tipo %></span>
+              <% if (m.interna) { %><span class="tag-nota-interna">Nota interna</span><% } %>
+              <small><%= new Date(m.criado_em).toLocaleString('pt-BR') %></small>
+            </div>
+            <p><%= m.mensagem %></p>
+          </div>
+        <% }) %>
+      </div>
+
+      <% if (chamado.status !== 'fechado') { %>
+      <form action="/chamados/<%= chamado.id %>/mensagem" method="POST" enctype="multipart/form-data" class="form-resposta">
+        <textarea name="mensagem" rows="3" required placeholder="Escreva sua resposta..."></textarea>
+        <input type="file" name="anexos" multiple>
+        <% if (usuarioLogado.tipo !== 'cliente') { %>
+          <label class="checkbox-linha">
+            <input type="checkbox" name="interna"> Marcar como nota interna (o cliente não verá esta mensagem)
+          </label>
+        <% } %>
+        <button type="submit" class="botao botao-primario"><i class="fa-solid fa-paper-plane"></i> Enviar resposta</button>
+      </form>
+      <% } else { %>
+        <p class="vazio">Este chamado está fechado e não aceita novas respostas.</p>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="coluna-lateral">
+
+    <% if (usuarioLogado.tipo !== 'cliente') { %>
+
+      <div class="card">
+        <h3>Tempo</h3>
+        <div class="linha-metrica">
+          <span><i class="fa-solid fa-stopwatch"></i> Tempo para assumir</span>
+          <strong><%= tempos.tempoParaAssumir || 'Ainda nao assumido' %></strong>
+        </div>
+        <div class="linha-metrica">
+          <span><i class="fa-solid fa-clock"></i> Tempo <%= chamado.status === 'fechado' || chamado.status === 'resolvido' ? 'total' : 'em aberto' %></span>
+          <strong><%= tempos.tempoTotal %></strong>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Ações do chamado</h3>
+
+        <% if (!chamado.responsavel_id) { %>
+        <form action="/chamados/<%= chamado.id %>/assumir" method="POST">
+          <button type="submit" class="botao botao-secundario botao-bloco"><i class="fa-solid fa-hand"></i> Assumir chamado</button>
+        </form>
+        <% } %>
+
+        <form action="/chamados/<%= chamado.id %>/status" method="POST" class="form-select-acao">
+          <label>Alterar status</label>
+          <select name="status" onchange="this.form.submit()">
+            <% Object.entries(STATUS_LABEL).forEach(([valor, label]) => { %>
+              <option value="<%= valor %>" <%= chamado.status === valor ? 'selected' : '' %>><%= label %></option>
+            <% }) %>
+          </select>
+        </form>
+
+        <form action="/chamados/<%= chamado.id %>/prioridade" method="POST" class="form-select-acao">
+          <label>Alterar prioridade</label>
+          <select name="prioridade" onchange="this.form.submit()">
+            <% ['baixa','media','alta','urgente'].forEach(p => { %>
+              <option value="<%= p %>" <%= chamado.prioridade === p ? 'selected' : '' %>><%= p %></option>
+            <% }) %>
+          </select>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Transferir setor</h3>
+        <form action="/chamados/<%= chamado.id %>/transferir" method="POST">
+          <select name="novo_setor_id" required>
+            <option value="">Selecione o novo setor...</option>
+            <% setores.filter(s => s.id !== chamado.setor_id).forEach(s => { %>
+              <option value="<%= s.id %>"><%= s.nome %></option>
+            <% }) %>
+          </select>
+          <textarea name="motivo" rows="2" placeholder="Motivo da transferência (opcional)"></textarea>
+          <button type="submit" class="botao botao-secundario botao-bloco"><i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir</button>
+        </form>
+      </div>
+
+    <% } %>
+
+    <div class="card">
+      <h3>Histórico</h3>
+      <ul class="lista-historico">
+        <% historico.forEach(h => { %>
+          <li>
+            <small><%= new Date(h.criado_em).toLocaleString('pt-BR') %></small>
+            <p><%= h.descricao %></p>
+          </li>
+        <% }) %>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<%- include('../_footer') %>

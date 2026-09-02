@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title><%= typeof tituloPagina !== 'undefined' ? tituloPagina + ' :: Painel de Chamados' : 'Painel de Chamados' %></title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/estilo.css">
+</head>
+<body>
+<% if (usuarioLogado) { %>
+<div class="app-shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <i class="fa-solid fa-headset"></i>
+      <span>Painel de Chamados</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="/chamados" class="<%= typeof secaoAtiva !== 'undefined' && secaoAtiva === 'lista' ? 'ativo' : '' %>">
+        <i class="fa-solid fa-list-ul"></i> Chamados
+      </a>
+      <a href="/chamados/novo" class="<%= typeof secaoAtiva !== 'undefined' && secaoAtiva === 'novo' ? 'ativo' : '' %>">
+        <i class="fa-solid fa-circle-plus"></i> Abrir chamado
+      </a>
+    </nav>
+    <div class="sidebar-rodape">
+      <div class="sidebar-usuario">
+        <div class="avatar"><%= usuarioLogado.nome.charAt(0).toUpperCase() %></div>
+        <div>
+          <strong><%= usuarioLogado.nome %></strong>
+          <small><%= usuarioLogado.tipo %></small>
+        </div>
+      </div>
+      <form action="/logout" method="POST">
+        <button type="submit" class="botao-sair"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
+      </form>
+    </div>
+  </aside>
+  <div class="area-principal">
+    <header class="topbar">
+      <h2><%= typeof tituloPagina !== 'undefined' ? tituloPagina : '' %></h2>
+    </header>
+    <main class="conteudo">
+<% } else { %>
+<main class="conteudo">
+<% } %>

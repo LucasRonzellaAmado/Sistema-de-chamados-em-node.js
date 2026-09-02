@@ -1,0 +1,9 @@
+<% tituloPagina = titulo %>
+<%- include('_header') %>
+  <div class="caixa-erro">
+    <i class="fa-solid fa-circle-exclamation icone-erro"></i>
+    <h1><%= titulo %></h1>
+    <p><%= mensagem %></p>
+    <a href="/chamados" class="botao botao-primario">Voltar para meus chamados</a>
+  </div>
+<%- include('_footer') %>

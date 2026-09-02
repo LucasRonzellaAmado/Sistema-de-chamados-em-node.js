@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Entrar :: Painel de Chamados</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/css/estilo.css">
+</head>
+<body class="pagina-login">
+  <div class="caixa-login">
+    <div class="marca-login">
+      <i class="fa-solid fa-headset"></i>
+      <h1>Painel de Chamados</h1>
+    </div>
+    <p class="subtitulo">Entre com seu e-mail e senha</p>
+
+    <% if (erro) { %>
+      <div class="alerta alerta-erro"><i class="fa-solid fa-triangle-exclamation"></i> <%= erro %></div>
+    <% } %>
+
+    <form action="/login" method="POST">
+      <label for="email">E-mail</label>
+      <input type="email" id="email" name="email" required autofocus>
+
+      <label for="senha">Senha</label>
+      <input type="password" id="senha" name="senha" required>
+
+      <button type="submit" class="botao botao-primario botao-bloco">Entrar</button>
+    </form>
+
+    <p class="rodape-login">Ainda nao tem conta? <a href="/cadastro">Cadastre-se como cliente</a></p>
+
+    <div class="dica-caixa">
+      <strong>Usuarios de teste (senha: 123456)</strong>
+      <ul>
+        <li>admin@empresa.com - Administrador</li>
+        <li>suporte@empresa.com - Agente de Suporte</li>
+        <li>infra@empresa.com - Agente de Infraestrutura</li>
+        <li>financeiro@empresa.com - Agente Financeiro</li>
+        <li>dev@empresa.com - Agente de Desenvolvimento</li>
+        <li>cliente@empresa.com - Cliente</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>
