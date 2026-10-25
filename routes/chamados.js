@@ -15,6 +15,7 @@ const {
 } = require('../middlewares/auth');
 const { logger } = require('../middlewares/logger');
 const { csrfProtection } = require('../middlewares/csrf');
+const { STATUS_VALIDOS, PRIORIDADES_VALIDAS } = require('../utils/validacao');
 
 // Extensoes aceitas nos anexos. Qualquer outra e ignorada (ex.: .html, .js, .exe).
 const EXTENSOES_PERMITIDAS = ['.pdf', '.png', '.jpg', '.jpeg', '.txt', '.docx', '.xlsx'];
@@ -143,7 +144,9 @@ router.post('/chamados/novo', exigirLogin, upload.array('anexos', 5), csrfProtec
     ? assunto_predefinido
     : titulo_customizado;
 
-  if (!titulo || !descricao || !setor_id) {
+  const setorExiste = setor_id && db.prepare('SELECT id FROM setores WHERE id = ?').get(setor_id);
+
+  if (!titulo || !descricao || !setorExiste) {
     removerArquivos(req.files);
     logger.aviso('CHAMADOS', `Falha ao abrir chamado (dados incompletos) usuario=${usuario.email}`);
     const setores = db.prepare('SELECT * FROM setores ORDER BY nome').all();
@@ -156,7 +159,7 @@ router.post('/chamados/novo', exigirLogin, upload.array('anexos', 5), csrfProtec
   const resultado = db.prepare(`
     INSERT INTO chamados (protocolo, titulo, descricao, setor_id, cliente_id, prioridade)
     VALUES (?, ?, ?, ?, ?, ?)
-  `).run(protocolo, titulo, descricao, setor_id, usuario.id, prioridade || 'media');
+  `).run(protocolo, titulo, descricao, setor_id, usuario.id, PRIORIDADES_VALIDAS.includes(prioridade) ? prioridade : 'media');
 
   const chamadoId = Number(resultado.lastInsertRowid);
 
@@ -267,6 +270,10 @@ router.post('/chamados/:id/transferir', exigirLogin, exigirAdmin, carregarChamad
   const setorAtual = db.prepare('SELECT s.nome FROM chamados c JOIN setores s ON s.id = c.setor_id WHERE c.id = ?').get(chamadoId);
   const setorNovo = db.prepare('SELECT nome FROM setores WHERE id = ?').get(novo_setor_id);
 
+  if (!setorNovo) {
+    return res.status(400).render('erro', { titulo: 'Dados inválidos', mensagem: 'Setor de destino inválido.' });
+  }
+
   db.prepare("UPDATE chamados SET setor_id = ?, responsavel_id = NULL, status = 'aberto', atualizado_em = datetime('now') WHERE id = ?")
     .run(novo_setor_id, chamadoId);
 
@@ -299,8 +306,18 @@ router.post('/chamados/:id/status', exigirLogin, exigirTI, carregarChamadoAutori
   const { status } = req.body;
   const chamadoId = req.params.id;
 
-  const fechamento = (status === 'resolvido' || status === 'fechado') ? ", fechado_em = datetime('now')" : '';
-  db.prepare(`UPDATE chamados SET status = ?, atualizado_em = datetime('now') ${fechamento} WHERE id = ?`).run(status, chamadoId);
+  if (!STATUS_VALIDOS.includes(status)) {
+    return res.status(400).render('erro', { titulo: 'Dados inválidos', mensagem: 'Status inválido.' });
+  }
+
+  // fechado_em so tem valor enquanto o chamado estiver resolvido ou fechado
+  db.prepare(`
+    UPDATE chamados
+    SET status = ?,
+        atualizado_em = datetime('now'),
+        fechado_em = CASE WHEN ? IN ('resolvido', 'fechado') THEN datetime('now') ELSE NULL END
+    WHERE id = ?
+  `).run(status, status, chamadoId);
 
   db.prepare(`
     INSERT INTO historico (chamado_id, usuario_id, tipo, descricao)
@@ -314,6 +331,10 @@ router.post('/chamados/:id/status', exigirLogin, exigirTI, carregarChamadoAutori
 router.post('/chamados/:id/prioridade', exigirLogin, exigirTI, carregarChamadoAutorizado, csrfProtection, (req, res) => {
   const { prioridade } = req.body;
   const chamadoId = req.params.id;
+
+  if (!PRIORIDADES_VALIDAS.includes(prioridade)) {
+    return res.status(400).render('erro', { titulo: 'Dados inválidos', mensagem: 'Prioridade inválida.' });
+  }
 
   db.prepare("UPDATE chamados SET prioridade = ?, atualizado_em = datetime('now') WHERE id = ?").run(prioridade, chamadoId);
 

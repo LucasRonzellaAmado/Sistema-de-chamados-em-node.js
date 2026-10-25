@@ -50,7 +50,7 @@
 </form>
 
 <script>
-  const TODOS_ASSUNTOS = <%- JSON.stringify(assuntos) %>;
+  const TODOS_ASSUNTOS = <%- JSON.stringify(assuntos).replace(/</g, '\\u003c') %>;
 </script>
 <script src="/js/novo-chamado.js"></script>
 

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../db/database');
 const { logger } = require('../middlewares/logger');
 const { csrfProtection } = require('../middlewares/csrf');
+const { validarCadastro } = require('../utils/validacao');
 
 router.get('/login', (req, res) => {
   if (req.session.usuario) return res.redirect('/chamados');
@@ -12,6 +13,10 @@ router.get('/login', (req, res) => {
 
 router.post('/login', csrfProtection, (req, res) => {
   const { email, senha } = req.body;
+
+  if (!email || !senha) {
+    return res.render('login', { erro: 'Informe e-mail e senha.' });
+  }
 
   const usuario = db.prepare('SELECT * FROM usuarios WHERE email = ? AND ativo = 1').get(email);
 
@@ -46,6 +51,11 @@ router.get('/cadastro', (req, res) => {
 
 router.post('/cadastro', csrfProtection, (req, res) => {
   const { nome, email, senha } = req.body;
+
+  const erroValidacao = validarCadastro({ nome, email, senha });
+  if (erroValidacao) {
+    return res.render('cadastro', { erro: erroValidacao });
+  }
 
   const jaExiste = db.prepare('SELECT id FROM usuarios WHERE email = ?').get(email);
   if (jaExiste) {
