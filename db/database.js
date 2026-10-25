@@ -1,7 +1,7 @@
 const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
+const config = require('../config');
 
-const db = new DatabaseSync(path.join(__dirname, 'chamados.db'));
+const db = new DatabaseSync(config.dbPath);
 
 db.exec('PRAGMA foreign_keys = ON;');
 
