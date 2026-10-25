@@ -3,7 +3,13 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const db = require('../db/database');
-const { exigirLogin, exigirTI } = require('../middlewares/auth');
+const {
+  exigirLogin,
+  exigirTI,
+  exigirAdmin,
+  podeAcessarChamado,
+  carregarChamadoAutorizado
+} = require('../middlewares/auth');
 const { logger } = require('../middlewares/logger');
 
 const storage = multer.diskStorage({
@@ -173,12 +179,7 @@ router.get('/chamados/:id', exigirLogin, (req, res) => {
   `).get(chamado.id);
   const tempos = calcularTemposChamado({ ...chamado, assumido_em: infoAtribuicao.assumido_em });
 
-  const podeVer =
-    usuario.tipo === 'admin' ||
-    (usuario.tipo === 'cliente' && chamado.cliente_id === usuario.id) ||
-    (usuario.tipo === 'agente' && chamado.setor_id === usuario.setor_id);
-
-  if (!podeVer) {
+  if (!podeAcessarChamado(usuario, chamado)) {
     logger.aviso('CHAMADOS', `Acesso negado ao chamado ${chamado.protocolo} para ${usuario.email}`);
     return res.status(403).render('erro', { titulo: 'Acesso negado', mensagem: 'Voce nao tem acesso a este chamado.' });
   }
@@ -202,7 +203,7 @@ router.get('/chamados/:id', exigirLogin, (req, res) => {
   });
 });
 
-router.post('/chamados/:id/mensagem', exigirLogin, upload.array('anexos', 5), (req, res) => {
+router.post('/chamados/:id/mensagem', exigirLogin, carregarChamadoAutorizado, upload.array('anexos', 5), (req, res) => {
   const usuario = req.session.usuario;
   const { mensagem, interna } = req.body;
   const chamadoId = req.params.id;
@@ -235,7 +236,7 @@ router.post('/chamados/:id/mensagem', exigirLogin, upload.array('anexos', 5), (r
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/transferir', exigirLogin, exigirTI, (req, res) => {
+router.post('/chamados/:id/transferir', exigirLogin, exigirAdmin, carregarChamadoAutorizado, (req, res) => {
   const { novo_setor_id, motivo } = req.body;
   const chamadoId = req.params.id;
 
@@ -255,7 +256,7 @@ router.post('/chamados/:id/transferir', exigirLogin, exigirTI, (req, res) => {
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/assumir', exigirLogin, exigirTI, (req, res) => {
+router.post('/chamados/:id/assumir', exigirLogin, exigirTI, carregarChamadoAutorizado, (req, res) => {
   const chamadoId = req.params.id;
   const usuario = req.session.usuario;
 
@@ -271,7 +272,7 @@ router.post('/chamados/:id/assumir', exigirLogin, exigirTI, (req, res) => {
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/status', exigirLogin, exigirTI, (req, res) => {
+router.post('/chamados/:id/status', exigirLogin, exigirTI, carregarChamadoAutorizado, (req, res) => {
   const { status } = req.body;
   const chamadoId = req.params.id;
 
@@ -287,7 +288,7 @@ router.post('/chamados/:id/status', exigirLogin, exigirTI, (req, res) => {
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/prioridade', exigirLogin, exigirTI, (req, res) => {
+router.post('/chamados/:id/prioridade', exigirLogin, exigirTI, carregarChamadoAutorizado, (req, res) => {
   const { prioridade } = req.body;
   const chamadoId = req.params.id;
 
