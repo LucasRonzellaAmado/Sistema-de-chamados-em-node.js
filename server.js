@@ -7,6 +7,7 @@ const path = require('path');
 
 const config = require('./config');
 const { injetarUsuarioNasViews } = require('./middlewares/auth');
+const { disponibilizarTokenCSRF } = require('./middlewares/csrf');
 const { logger, middlewareRequisicoes } = require('./middlewares/logger');
 const rotasAuth = require('./routes/auth');
 const rotasChamados = require('./routes/chamados');
@@ -36,6 +37,7 @@ app.use(session({
 }));
 
 app.use(injetarUsuarioNasViews);
+app.use(disponibilizarTokenCSRF);
 
 app.get('/', (req, res) => res.redirect(req.session.usuario ? '/chamados' : '/login'));
 
@@ -48,6 +50,13 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
+  if (err.code === 'EBADCSRFTOKEN') {
+    logger.aviso('CSRF', `Token invalido em ${req.method} ${req.originalUrl}`);
+    return res.status(403).render('erro', {
+      titulo: 'Sessao expirada',
+      mensagem: 'Sua sessao expirou ou o formulario e invalido. Recarregue a pagina e tente novamente.'
+    });
+  }
   logger.erro('SERVIDOR', `${err.message}\n${err.stack}`);
   res.status(500).render('erro', { titulo: 'Erro interno', mensagem: 'Algo deu errado ao processar sua solicitacao.' });
 });

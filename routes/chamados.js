@@ -14,6 +14,7 @@ const {
   carregarChamadoAutorizado
 } = require('../middlewares/auth');
 const { logger } = require('../middlewares/logger');
+const { csrfProtection } = require('../middlewares/csrf');
 
 // Extensoes aceitas nos anexos. Qualquer outra e ignorada (ex.: .html, .js, .exe).
 const EXTENSOES_PERMITIDAS = ['.pdf', '.png', '.jpg', '.jpeg', '.txt', '.docx', '.xlsx'];
@@ -134,7 +135,7 @@ router.get('/chamados/novo', exigirLogin, (req, res) => {
   res.render('chamados/novo', { setores, assuntos, erro: null });
 });
 
-router.post('/chamados/novo', exigirLogin, upload.array('anexos', 5), (req, res) => {
+router.post('/chamados/novo', exigirLogin, upload.array('anexos', 5), csrfProtection, (req, res) => {
   const usuario = req.session.usuario;
   const { setor_id, assunto_predefinido, titulo_customizado, descricao, prioridade } = req.body;
 
@@ -222,7 +223,7 @@ router.get('/chamados/:id', exigirLogin, (req, res) => {
   });
 });
 
-router.post('/chamados/:id/mensagem', exigirLogin, carregarChamadoAutorizado, upload.array('anexos', 5), (req, res) => {
+router.post('/chamados/:id/mensagem', exigirLogin, carregarChamadoAutorizado, upload.array('anexos', 5), csrfProtection, (req, res) => {
   const usuario = req.session.usuario;
   const { mensagem, interna } = req.body;
   const chamadoId = req.params.id;
@@ -258,7 +259,7 @@ router.post('/chamados/:id/mensagem', exigirLogin, carregarChamadoAutorizado, up
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/transferir', exigirLogin, exigirAdmin, carregarChamadoAutorizado, (req, res) => {
+router.post('/chamados/:id/transferir', exigirLogin, exigirAdmin, carregarChamadoAutorizado, csrfProtection, (req, res) => {
   const { novo_setor_id, motivo } = req.body;
   const chamadoId = req.params.id;
 
@@ -278,7 +279,7 @@ router.post('/chamados/:id/transferir', exigirLogin, exigirAdmin, carregarChamad
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/assumir', exigirLogin, exigirTI, carregarChamadoAutorizado, (req, res) => {
+router.post('/chamados/:id/assumir', exigirLogin, exigirTI, carregarChamadoAutorizado, csrfProtection, (req, res) => {
   const chamadoId = req.params.id;
   const usuario = req.session.usuario;
 
@@ -294,7 +295,7 @@ router.post('/chamados/:id/assumir', exigirLogin, exigirTI, carregarChamadoAutor
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/status', exigirLogin, exigirTI, carregarChamadoAutorizado, (req, res) => {
+router.post('/chamados/:id/status', exigirLogin, exigirTI, carregarChamadoAutorizado, csrfProtection, (req, res) => {
   const { status } = req.body;
   const chamadoId = req.params.id;
 
@@ -310,7 +311,7 @@ router.post('/chamados/:id/status', exigirLogin, exigirTI, carregarChamadoAutori
   res.redirect('/chamados/' + chamadoId);
 });
 
-router.post('/chamados/:id/prioridade', exigirLogin, exigirTI, carregarChamadoAutorizado, (req, res) => {
+router.post('/chamados/:id/prioridade', exigirLogin, exigirTI, carregarChamadoAutorizado, csrfProtection, (req, res) => {
   const { prioridade } = req.body;
   const chamadoId = req.params.id;
 

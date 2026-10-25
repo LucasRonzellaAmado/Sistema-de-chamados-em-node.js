@@ -61,6 +61,7 @@
 
       <% if (chamado.status !== 'fechado') { %>
       <form action="/chamados/<%= chamado.id %>/mensagem" method="POST" enctype="multipart/form-data" class="form-resposta">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <textarea name="mensagem" rows="3" required placeholder="Escreva sua resposta..."></textarea>
         <input type="file" name="anexos" multiple>
         <% if (usuarioLogado.tipo !== 'cliente') { %>
@@ -97,11 +98,13 @@
 
         <% if (!chamado.responsavel_id) { %>
         <form action="/chamados/<%= chamado.id %>/assumir" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <button type="submit" class="botao botao-secundario botao-bloco"><i class="fa-solid fa-hand"></i> Assumir chamado</button>
         </form>
         <% } %>
 
         <form action="/chamados/<%= chamado.id %>/status" method="POST" class="form-select-acao">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label>Alterar status</label>
           <select name="status" onchange="this.form.submit()">
             <% Object.entries(STATUS_LABEL).forEach(([valor, label]) => { %>
@@ -111,6 +114,7 @@
         </form>
 
         <form action="/chamados/<%= chamado.id %>/prioridade" method="POST" class="form-select-acao">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <label>Alterar prioridade</label>
           <select name="prioridade" onchange="this.form.submit()">
             <% ['baixa','media','alta','urgente'].forEach(p => { %>
@@ -123,6 +127,7 @@
       <div class="card">
         <h3>Transferir setor</h3>
         <form action="/chamados/<%= chamado.id %>/transferir" method="POST">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <select name="novo_setor_id" required>
             <option value="">Selecione o novo setor...</option>
             <% setores.filter(s => s.id !== chamado.setor_id).forEach(s => { %>

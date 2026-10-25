@@ -3,13 +3,14 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const db = require('../db/database');
 const { logger } = require('../middlewares/logger');
+const { csrfProtection } = require('../middlewares/csrf');
 
 router.get('/login', (req, res) => {
   if (req.session.usuario) return res.redirect('/chamados');
   res.render('login', { erro: null });
 });
 
-router.post('/login', (req, res) => {
+router.post('/login', csrfProtection, (req, res) => {
   const { email, senha } = req.body;
 
   const usuario = db.prepare('SELECT * FROM usuarios WHERE email = ? AND ativo = 1').get(email);
@@ -31,7 +32,7 @@ router.post('/login', (req, res) => {
   res.redirect('/chamados');
 });
 
-router.post('/logout', (req, res) => {
+router.post('/logout', csrfProtection, (req, res) => {
   const email = req.session.usuario ? req.session.usuario.email : 'desconhecido';
   req.session.destroy(() => {
     logger.info('LOGIN', `Logout: ${email}`);
@@ -43,7 +44,7 @@ router.get('/cadastro', (req, res) => {
   res.render('cadastro', { erro: null });
 });
 
-router.post('/cadastro', (req, res) => {
+router.post('/cadastro', csrfProtection, (req, res) => {
   const { nome, email, senha } = req.body;
 
   const jaExiste = db.prepare('SELECT id FROM usuarios WHERE email = ?').get(email);
