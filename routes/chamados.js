@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
+const crypto = require('crypto');
+const config = require('../config');
 const db = require('../db/database');
 const {
   exigirLogin,
@@ -12,13 +15,28 @@ const {
 } = require('../middlewares/auth');
 const { logger } = require('../middlewares/logger');
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, path.join(__dirname, '..', 'uploads')),
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname.replace(/\s+/g, '_'));
+// Extensoes aceitas nos anexos. Qualquer outra e ignorada (ex.: .html, .js, .exe).
+const EXTENSOES_PERMITIDAS = ['.pdf', '.png', '.jpg', '.jpeg', '.txt', '.docx', '.xlsx'];
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, config.uploadsDir),
+    filename: (req, file, cb) => {
+      // Nome aleatorio no disco: o nome original nunca e usado como caminho
+      cb(null, crypto.randomUUID() + path.extname(file.originalname).toLowerCase());
+    }
+  }),
+  limits: { fileSize: 15 * 1024 * 1024, files: 5 },
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, EXTENSOES_PERMITIDAS.includes(ext));
   }
 });
-const upload = multer({ storage, limits: { fileSize: 15 * 1024 * 1024 } });
+
+// Remove do disco arquivos enviados que nao chegaram a ser registrados
+function removerArquivos(files = []) {
+  files.forEach(f => fs.unlink(f.path, () => {}));
+}
 
 function gerarProtocolo() {
   const ultimo = db.prepare('SELECT id FROM chamados ORDER BY id DESC LIMIT 1').get();
@@ -125,6 +143,7 @@ router.post('/chamados/novo', exigirLogin, upload.array('anexos', 5), (req, res)
     : titulo_customizado;
 
   if (!titulo || !descricao || !setor_id) {
+    removerArquivos(req.files);
     logger.aviso('CHAMADOS', `Falha ao abrir chamado (dados incompletos) usuario=${usuario.email}`);
     const setores = db.prepare('SELECT * FROM setores ORDER BY nome').all();
     const assuntos = db.prepare('SELECT * FROM assuntos_predefinidos ORDER BY setor_id').all();
@@ -208,7 +227,10 @@ router.post('/chamados/:id/mensagem', exigirLogin, carregarChamadoAutorizado, up
   const { mensagem, interna } = req.body;
   const chamadoId = req.params.id;
 
-  if (!mensagem || !mensagem.trim()) return res.redirect('/chamados/' + chamadoId);
+  if (!mensagem || !mensagem.trim()) {
+    removerArquivos(req.files);
+    return res.redirect('/chamados/' + chamadoId);
+  }
 
   const ehInterna = (usuario.tipo !== 'cliente' && interna === 'on') ? 1 : 0;
 
@@ -301,6 +323,22 @@ router.post('/chamados/:id/prioridade', exigirLogin, exigirTI, carregarChamadoAu
 
   logger.info('PRIORIDADE', `Chamado id=${chamadoId} alterado para prioridade "${prioridade}" por ${req.session.usuario.email}`);
   res.redirect('/chamados/' + chamadoId);
+});
+
+// Download de anexo: so quem tem acesso ao chamado dono do anexo
+router.get('/anexos/:id', exigirLogin, (req, res) => {
+  const anexo = db.prepare(`
+    SELECT a.*, c.cliente_id, c.setor_id
+    FROM anexos a
+    JOIN chamados c ON c.id = a.chamado_id
+    WHERE a.id = ?
+  `).get(req.params.id);
+
+  if (!anexo || !podeAcessarChamado(req.session.usuario, anexo)) {
+    return res.status(404).render('erro', { titulo: 'Nao encontrado', mensagem: 'Anexo nao encontrado.' });
+  }
+
+  res.download(path.join(config.uploadsDir, anexo.caminho_arquivo), anexo.nome_original);
 });
 
 router.get('/api/assuntos/:setorId', exigirLogin, (req, res) => {

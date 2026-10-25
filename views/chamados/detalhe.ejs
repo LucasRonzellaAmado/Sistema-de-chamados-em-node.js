@@ -32,7 +32,7 @@
       <ul class="lista-anexos">
         <% anexos.forEach(a => { %>
           <li>
-            <i class="fa-solid fa-paperclip"></i> <a href="/uploads/<%= a.caminho_arquivo %>" target="_blank"><%= a.nome_original %></a>
+            <i class="fa-solid fa-paperclip"></i> <a href="/anexos/<%= a.id %>"><%= a.nome_original %></a>
             <small>enviado por <%= a.usuario_nome %></small>
           </li>
         <% }) %>
