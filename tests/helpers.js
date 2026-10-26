@@ -24,12 +24,19 @@ function iniciarServidor() {
   });
 }
 
+// Fecha o servidor (inclusive conexoes keep-alive, senao o close nunca termina)
 function encerrar(server) {
-  return new Promise(resolve => server.close(() => {
-    fs.rmSync(DB_TESTE, { force: true });
-    resolve();
-  }));
+  return new Promise(resolve => {
+    server.close(() => resolve());
+    server.closeAllConnections();
+  });
 }
+
+// O banco temporario so pode ser apagado depois de fechado (no Windows o arquivo fica travado)
+process.on('exit', () => {
+  try { db.close(); } catch {}
+  try { fs.rmSync(DB_TESTE, { force: true }); } catch {}
+});
 
 function criarUsuario({ nome, email, tipo = 'cliente', setor_id = null }) {
   db.prepare(`

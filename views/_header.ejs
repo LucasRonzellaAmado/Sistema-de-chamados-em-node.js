@@ -4,21 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title><%= typeof tituloPagina !== 'undefined' ? tituloPagina + ' :: Painel de Chamados' : 'Painel de Chamados' %></title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" referrerpolicy="no-referrer">
 <link rel="stylesheet" href="/css/estilo.css">
+<script src="/js/app.js" defer></script>
 </head>
 <body>
 <% if (usuarioLogado) { %>
+<% const PERFIL = { admin: 'Administrador', agente: 'Técnico', cliente: 'Cliente' }; %>
 <div class="app-shell">
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <i class="fa-solid fa-headset"></i>
+      <span class="logo-icone"><i class="fa-solid fa-headset"></i></span>
       <span>Painel de Chamados</span>
     </div>
     <nav class="sidebar-nav">
+      <span class="nav-titulo">Atendimento</span>
       <a href="/chamados" class="<%= typeof secaoAtiva !== 'undefined' && secaoAtiva === 'lista' ? 'ativo' : '' %>">
-        <i class="fa-solid fa-list-ul"></i> Chamados
+        <i class="fa-solid fa-inbox"></i> <%= ehEquipe(usuarioLogado) ? 'Todos os chamados' : 'Meus chamados' %>
       </a>
+      <% if (ehEquipe(usuarioLogado)) { %>
+        <a href="/chamados?visao=meus"><i class="fa-solid fa-user-check"></i> Atribuídos a mim</a>
+        <a href="/chamados?visao=sem_responsavel"><i class="fa-solid fa-user-clock"></i> Sem responsável</a>
+        <a href="/chamados?visao=observando"><i class="fa-solid fa-eye"></i> Que observo</a>
+      <% } %>
       <a href="/chamados/novo" class="<%= typeof secaoAtiva !== 'undefined' && secaoAtiva === 'novo' ? 'ativo' : '' %>">
         <i class="fa-solid fa-circle-plus"></i> Abrir chamado
       </a>
@@ -28,7 +36,7 @@
         <div class="avatar"><%= usuarioLogado.nome.charAt(0).toUpperCase() %></div>
         <div>
           <strong><%= usuarioLogado.nome %></strong>
-          <small><%= usuarioLogado.tipo %></small>
+          <small><%= PERFIL[usuarioLogado.tipo] || usuarioLogado.tipo %></small>
         </div>
       </div>
       <form action="/logout" method="POST">
@@ -39,7 +47,14 @@
   </aside>
   <div class="area-principal">
     <header class="topbar">
+      <button type="button" class="botao-menu" data-abrir-menu aria-label="Abrir menu"><i class="fa-solid fa-bars"></i></button>
       <h2><%= typeof tituloPagina !== 'undefined' ? tituloPagina : '' %></h2>
+      <% if (ehEquipe(usuarioLogado)) { %>
+      <form action="/chamados" method="GET" class="busca-topo" role="search">
+        <i class="fa-solid fa-magnifying-glass"></i>
+        <input type="search" name="q" placeholder="Buscar protocolo ou assunto..." maxlength="100" aria-label="Buscar chamados">
+      </form>
+      <% } %>
     </header>
     <main class="conteudo">
 <% } else { %>

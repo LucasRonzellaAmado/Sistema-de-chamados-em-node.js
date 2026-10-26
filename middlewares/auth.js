@@ -1,17 +1,34 @@
 const { logger } = require('./logger');
 const db = require('../db/database');
 
+// Equipe = tecnicos (agentes) e administradores. Clientes sao os solicitantes.
+function ehEquipe(usuario) {
+  return !!usuario && (usuario.tipo === 'agente' || usuario.tipo === 'admin');
+}
+
+// Exige sessao e recarrega o usuario do banco a cada requisicao: se ele foi
+// desativado ou mudou de perfil, a sessao antiga deixa de valer na hora.
 function exigirLogin(req, res, next) {
-  if (!req.session.usuario) {
+  const sessao = req.session.usuario;
+  if (!sessao) {
     logger.aviso('AUTH', `Acesso negado (sem sessao) em ${req.originalUrl}`);
     return res.redirect('/login');
   }
+
+  const atual = db.prepare('SELECT id, nome, email, tipo, setor_id FROM usuarios WHERE id = ? AND ativo = 1').get(sessao.id);
+  if (!atual) {
+    logger.aviso('AUTH', `Sessao de usuario inativo/removido encerrada: ${sessao.email}`);
+    return req.session.destroy(() => res.redirect('/login'));
+  }
+
+  req.session.usuario = { ...atual };
+  res.locals.usuarioLogado = req.session.usuario;
   next();
 }
 
 function exigirTI(req, res, next) {
   const usuario = req.session.usuario;
-  if (!usuario || (usuario.tipo !== 'agente' && usuario.tipo !== 'admin')) {
+  if (!ehEquipe(usuario)) {
     logger.aviso('AUTH', `Acesso negado (nao-TI) usuario=${usuario ? usuario.email : 'anonimo'} em ${req.originalUrl}`);
     return res.status(403).render('erro', {
       titulo: 'Acesso negado',
@@ -33,11 +50,11 @@ function exigirAdmin(req, res, next) {
   next();
 }
 
-// Regra central de acesso a um chamado: quem pode ver/agir sobre ele.
+// Regra central de acesso a um chamado (modelo GLPI): toda a equipe enxerga e
+// colabora em qualquer chamado; o cliente so enxerga os chamados que abriu.
 function podeAcessarChamado(usuario, chamado) {
-  if (usuario.tipo === 'admin') return true;
-  if (usuario.tipo === 'cliente') return chamado.cliente_id === usuario.id;
-  return chamado.setor_id === usuario.setor_id; // agente
+  if (ehEquipe(usuario)) return true;
+  return chamado.cliente_id === usuario.id;
 }
 
 // Carrega o chamado pelo :id e bloqueia se o usuario nao tiver acesso.
@@ -59,10 +76,12 @@ function carregarChamadoAutorizado(req, res, next) {
 
 function injetarUsuarioNasViews(req, res, next) {
   res.locals.usuarioLogado = req.session.usuario || null;
+  res.locals.ehEquipe = ehEquipe;
   next();
 }
 
 module.exports = {
+  ehEquipe,
   exigirLogin,
   exigirTI,
   exigirAdmin,

@@ -3,55 +3,64 @@
 <%- include('../_header') %>
 
 <div class="cabecalho-pagina">
-  <h1>Abrir novo chamado</h1>
+  <div>
+    <h1>Abrir novo chamado</h1>
+    <p class="meta-chamado">Quanto mais detalhes, mais rápido a equipe consegue ajudar.</p>
+  </div>
 </div>
 
 <% if (erro) { %>
-  <div class="alerta alerta-erro"><%= erro %></div>
+  <div class="alerta alerta-erro"><i class="fa-solid fa-triangle-exclamation"></i> <%= erro %></div>
 <% } %>
 
 <form action="/chamados/novo" method="POST" enctype="multipart/form-data" class="formulario-card">
   <input type="hidden" name="_csrf" value="<%= csrfToken %>">
 
-  <label for="setor_id">Setor</label>
-  <select id="setor_id" name="setor_id" required>
-    <option value="">Selecione o setor...</option>
-    <% setores.forEach(s => { %>
-      <option value="<%= s.id %>"><%= s.nome %> — <%= s.descricao %></option>
-    <% }) %>
-  </select>
+  <div class="grade-form">
+    <div>
+      <label for="setor_id">Setor</label>
+      <select id="setor_id" name="setor_id" required>
+        <option value="">Selecione o setor...</option>
+        <% setores.forEach(s => { %>
+          <option value="<%= s.id %>"><%= s.nome %> — <%= s.descricao %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div>
+      <label for="prioridade">Prioridade</label>
+      <select id="prioridade" name="prioridade">
+        <option value="baixa">Baixa</option>
+        <option value="media" selected>Média</option>
+        <option value="alta">Alta</option>
+        <option value="urgente">Urgente</option>
+      </select>
+    </div>
+  </div>
 
   <label for="assunto_predefinido">Assunto</label>
   <select id="assunto_predefinido" name="assunto_predefinido">
     <option value="">Selecione o setor primeiro...</option>
   </select>
 
-  <div id="campo-assunto-customizado" style="display:none;">
+  <div id="campo-assunto-customizado" hidden>
     <label for="titulo_customizado">Descreva o assunto</label>
-    <input type="text" id="titulo_customizado" name="titulo_customizado" placeholder="Ex: Sistema de vendas não carrega">
+    <input type="text" id="titulo_customizado" name="titulo_customizado" maxlength="150" placeholder="Ex: Sistema de vendas não carrega">
   </div>
 
-  <label for="prioridade">Prioridade</label>
-  <select id="prioridade" name="prioridade">
-    <option value="baixa">Baixa</option>
-    <option value="media" selected>Média</option>
-    <option value="alta">Alta</option>
-    <option value="urgente">Urgente</option>
-  </select>
-
   <label for="descricao">Descreva o que está acontecendo</label>
-  <textarea id="descricao" name="descricao" rows="6" required placeholder="Explique com detalhes o problema: quando começou, o que você já tentou fazer, mensagens de erro, etc."></textarea>
+  <textarea id="descricao" name="descricao" rows="6" required maxlength="10000" placeholder="Explique com detalhes o problema: quando começou, o que você já tentou fazer, mensagens de erro, etc."></textarea>
 
   <label for="anexos">Documentação / prints (opcional)</label>
-  <input type="file" id="anexos" name="anexos" multiple>
-  <small>Você pode anexar até 5 arquivos (prints, PDFs, documentos etc).</small>
+  <input type="file" id="anexos" name="anexos" multiple accept=".pdf,.png,.jpg,.jpeg,.txt,.docx,.xlsx">
+  <small class="texto-suave">Até 5 arquivos de 15 MB: PDF, PNG, JPG, TXT, DOCX ou XLSX.</small>
 
-  <button type="submit" class="botao botao-primario"><i class="fa-solid fa-paper-plane"></i> Abrir chamado</button>
+  <div class="rodape-form">
+    <a href="/chamados" class="botao botao-secundario">Cancelar</a>
+    <button type="submit" class="botao botao-primario"><i class="fa-solid fa-paper-plane"></i> Abrir chamado</button>
+  </div>
 </form>
 
-<script>
-  const TODOS_ASSUNTOS = <%- JSON.stringify(assuntos).replace(/</g, '\\u003c') %>;
-</script>
+<script type="application/json" id="dados-assuntos"><%- JSON.stringify(assuntos).replace(/</g, '\\u003c') %></script>
 <script src="/js/novo-chamado.js"></script>
 
 <%- include('../_footer') %>

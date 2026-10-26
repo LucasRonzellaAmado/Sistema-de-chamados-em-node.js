@@ -1,75 +1,117 @@
+<% const equipe = ehEquipe(usuarioLogado); %>
 <% tituloPagina = chamado.protocolo + ' - ' + chamado.titulo %>
 <% secaoAtiva = 'lista' %>
 <%- include('../_header') %>
+<%
+  const dataBr = (t) => new Date(t.replace(' ', 'T') + 'Z').toLocaleString('pt-BR');
+  const PERFIL = { admin: 'Administrador', agente: 'Técnico', cliente: 'Cliente' };
+  const TIPO_MSG = { acompanhamento: null, nota: 'Nota privada', solucao: 'Solução' };
+  const listaAnexos = (lista) => lista || [];
+%>
 
 <div class="cabecalho-pagina">
   <div>
-    <h1><%= chamado.protocolo %> — <%= chamado.titulo %></h1>
+    <a href="/chamados" class="link-voltar"><i class="fa-solid fa-arrow-left"></i> Voltar para a lista</a>
+    <h1><span class="protocolo"><%= chamado.protocolo %></span> <%= chamado.titulo %></h1>
     <p class="meta-chamado">
-      Setor: <strong><%= chamado.setor_nome %></strong> ·
-      Cliente: <strong><%= chamado.cliente_nome %></strong> ·
-      Responsável: <strong><%= chamado.responsavel_nome || 'Ninguém assumiu ainda' %></strong>
+      Aberto em <%= dataBr(chamado.criado_em) %> por <strong><%= chamado.cliente_nome %></strong>
     </p>
   </div>
   <div class="etiquetas-cabecalho">
-    <span class="etiqueta prioridade-<%= chamado.prioridade %>"><%= chamado.prioridade %></span>
+    <span class="etiqueta prioridade-<%= chamado.prioridade %>"><%= PRIORIDADE_LABEL[chamado.prioridade] %></span>
     <span class="etiqueta status-<%= chamado.status %>"><%= STATUS_LABEL[chamado.status] %></span>
   </div>
 </div>
+
+<% if (chamado.status === 'resolvido' && chamado.cliente_id === usuarioLogado.id) { %>
+  <div class="card card-aprovacao">
+    <div>
+      <h3><i class="fa-solid fa-circle-check"></i> A equipe registrou uma solução</h3>
+      <p>Confira a solução na conversa abaixo. O problema foi resolvido?</p>
+    </div>
+    <div class="acoes-aprovacao">
+      <form action="/chamados/<%= chamado.id %>/solucao/aprovar" method="POST">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <button type="submit" class="botao botao-sucesso"><i class="fa-solid fa-thumbs-up"></i> Sim, aprovar e fechar</button>
+      </form>
+      <form action="/chamados/<%= chamado.id %>/solucao/recusar" method="POST" class="form-recusa">
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+        <input type="text" name="motivo" maxlength="10000" placeholder="O que ainda não funciona? (opcional)">
+        <button type="submit" class="botao botao-perigo"><i class="fa-solid fa-rotate-left"></i> Não, reabrir</button>
+      </form>
+    </div>
+  </div>
+<% } %>
 
 <div class="layout-detalhe">
 
   <div class="coluna-principal">
 
     <div class="card">
-      <h3>Descrição do problema</h3>
+      <h3><i class="fa-regular fa-file-lines"></i> Descrição do problema</h3>
       <p class="descricao-original"><%= chamado.descricao %></p>
+      <% if (listaAnexos(anexosPorMensagem.chamado).length > 0) { %>
+        <ul class="lista-anexos">
+          <% anexosPorMensagem.chamado.forEach(a => { %>
+            <li><i class="fa-solid fa-paperclip"></i> <a href="/anexos/<%= a.id %>"><%= a.nome_original %></a></li>
+          <% }) %>
+        </ul>
+      <% } %>
     </div>
 
-    <% if (anexos.length > 0) { %>
-    <div class="card">
-      <h3>Documentação anexada</h3>
-      <ul class="lista-anexos">
-        <% anexos.forEach(a => { %>
-          <li>
-            <i class="fa-solid fa-paperclip"></i> <a href="/anexos/<%= a.id %>"><%= a.nome_original %></a>
-            <small>enviado por <%= a.usuario_nome %></small>
-          </li>
-        <% }) %>
-      </ul>
-    </div>
-    <% } %>
-
-    <div class="card">
-      <h3>Conversa</h3>
+    <div class="card" id="conversa">
+      <h3><i class="fa-regular fa-comments"></i> Acompanhamentos</h3>
       <div class="timeline-mensagens">
         <% if (mensagens.length === 0) { %>
           <p class="vazio">Nenhuma mensagem ainda.</p>
         <% } %>
         <% mensagens.forEach(m => { %>
-          <div class="mensagem <%= m.interna ? 'mensagem-interna' : '' %> <%= m.usuario_id === usuarioLogado.id ? 'mensagem-propria' : '' %>">
-            <div class="mensagem-cabecalho">
-              <strong><%= m.usuario_nome %></strong>
-              <span class="tag-tipo-usuario"><%= m.usuario_tipo %></span>
-              <% if (m.interna) { %><span class="tag-nota-interna">Nota interna</span><% } %>
-              <small><%= new Date(m.criado_em).toLocaleString('pt-BR') %></small>
+          <div class="mensagem mensagem-<%= m.tipo %> <%= m.usuario_tipo === 'cliente' ? 'mensagem-cliente' : 'mensagem-equipe' %> <%= m.usuario_id === usuarioLogado.id ? 'mensagem-propria' : '' %>">
+            <div class="avatar avatar-pequeno"><%= m.usuario_nome.charAt(0).toUpperCase() %></div>
+            <div class="mensagem-corpo">
+              <div class="mensagem-cabecalho">
+                <strong><%= m.usuario_nome %></strong>
+                <span class="tag-tipo-usuario"><%= PERFIL[m.usuario_tipo] || m.usuario_tipo %></span>
+                <% if (m.tipo === 'nota') { %><span class="tag-nota-interna"><i class="fa-solid fa-lock"></i> Nota privada</span><% } %>
+                <% if (m.tipo === 'solucao') { %><span class="tag-solucao"><i class="fa-solid fa-circle-check"></i> Solução</span><% } %>
+                <small><%= dataBr(m.criado_em) %></small>
+              </div>
+              <p><%= m.mensagem %></p>
+              <% if (listaAnexos(anexosPorMensagem[m.id]).length > 0) { %>
+                <ul class="lista-anexos">
+                  <% anexosPorMensagem[m.id].forEach(a => { %>
+                    <li><i class="fa-solid fa-paperclip"></i> <a href="/anexos/<%= a.id %>"><%= a.nome_original %></a></li>
+                  <% }) %>
+                </ul>
+              <% } %>
             </div>
-            <p><%= m.mensagem %></p>
           </div>
         <% }) %>
       </div>
 
       <% if (chamado.status !== 'fechado') { %>
-      <form action="/chamados/<%= chamado.id %>/mensagem" method="POST" enctype="multipart/form-data" class="form-resposta">
+      <form action="/chamados/<%= chamado.id %>/mensagem" method="POST" enctype="multipart/form-data" class="form-resposta" data-form-resposta data-modo="acompanhamento">
         <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-        <textarea name="mensagem" rows="3" required placeholder="Escreva sua resposta..."></textarea>
-        <input type="file" name="anexos" multiple>
-        <% if (usuarioLogado.tipo !== 'cliente') { %>
-          <label class="checkbox-linha">
-            <input type="checkbox" name="interna"> Marcar como nota interna (o cliente não verá esta mensagem)
-          </label>
+        <input type="hidden" name="tipo" value="acompanhamento">
+        <% if (equipe) { %>
+          <div class="abas-resposta" role="tablist">
+            <button type="button" class="aba ativo" data-tipo="acompanhamento"><i class="fa-regular fa-comment"></i> Responder ao cliente</button>
+            <button type="button" class="aba" data-tipo="nota"><i class="fa-solid fa-lock"></i> Nota privada da equipe</button>
+            <button type="button" class="aba" data-tipo="solucao"><i class="fa-solid fa-circle-check"></i> Solução</button>
+          </div>
         <% } %>
-        <button type="submit" class="botao botao-primario"><i class="fa-solid fa-paper-plane"></i> Enviar resposta</button>
+        <textarea name="mensagem" rows="4" required maxlength="10000" placeholder="Escreva sua resposta..."></textarea>
+        <% if (equipe) { %>
+          <p class="aviso-comando" data-aviso-comando hidden></p>
+          <p class="dica-comandos">
+            <i class="fa-solid fa-terminal"></i> Atalhos: comece com <code>/nota</code> (ou <code>/privado</code>) para conversar só com a equipe,
+            ou <code>/solucao</code> para registrar a solução.
+          </p>
+        <% } %>
+        <div class="linha-envio">
+          <input type="file" name="anexos" multiple accept=".pdf,.png,.jpg,.jpeg,.txt,.docx,.xlsx">
+          <button type="submit" class="botao botao-primario"><i class="fa-solid fa-paper-plane"></i> <span>Enviar resposta</span></button>
+        </div>
       </form>
       <% } else { %>
         <p class="vazio">Este chamado está fechado e não aceita novas respostas.</p>
@@ -79,34 +121,66 @@
 
   <div class="coluna-lateral">
 
-    <% if (usuarioLogado.tipo !== 'cliente') { %>
+    <div class="card">
+      <h3><i class="fa-solid fa-circle-info"></i> Detalhes</h3>
+      <dl class="lista-detalhes">
+        <dt>Setor</dt><dd><%= chamado.setor_nome %></dd>
+        <dt>Solicitante</dt><dd><%= chamado.cliente_nome %><% if (equipe) { %><br><small><%= chamado.cliente_email %></small><% } %></dd>
+        <dt>Responsável</dt><dd><%= chamado.responsavel_nome || 'Ninguém assumiu ainda' %></dd>
+        <% if (equipe) { %>
+          <dt>Observadores</dt>
+          <dd><%= observadores.length ? observadores.map(o => o.nome).join(', ') : 'Nenhum' %></dd>
+        <% } %>
+      </dl>
+    </div>
+
+    <% if (equipe) { %>
 
       <div class="card">
-        <h3>Tempo</h3>
+        <h3><i class="fa-solid fa-stopwatch"></i> Tempo</h3>
         <div class="linha-metrica">
-          <span><i class="fa-solid fa-stopwatch"></i> Tempo para assumir</span>
-          <strong><%= tempos.tempoParaAssumir || 'Ainda nao assumido' %></strong>
+          <span>Tempo para assumir</span>
+          <strong><%= tempos.tempoParaAssumir || 'Ainda não assumido' %></strong>
         </div>
         <div class="linha-metrica">
-          <span><i class="fa-solid fa-clock"></i> Tempo <%= chamado.status === 'fechado' || chamado.status === 'resolvido' ? 'total' : 'em aberto' %></span>
+          <span>Tempo <%= chamado.status === 'fechado' || chamado.status === 'resolvido' ? 'total' : 'em aberto' %></span>
           <strong><%= tempos.tempoTotal %></strong>
         </div>
       </div>
 
       <div class="card">
-        <h3>Ações do chamado</h3>
+        <h3><i class="fa-solid fa-sliders"></i> Ações</h3>
 
-        <% if (!chamado.responsavel_id) { %>
-        <form action="/chamados/<%= chamado.id %>/assumir" method="POST">
+        <div class="grupo-botoes">
+          <% if (chamado.responsavel_id !== usuarioLogado.id) { %>
+          <form action="/chamados/<%= chamado.id %>/assumir" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="botao botao-primario botao-bloco"><i class="fa-solid fa-hand"></i> Assumir chamado</button>
+          </form>
+          <% } %>
+          <form action="/chamados/<%= chamado.id %>/observar" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+            <button type="submit" class="botao botao-secundario botao-bloco">
+              <i class="fa-solid <%= ehObservador ? 'fa-eye-slash' : 'fa-eye' %>"></i> <%= ehObservador ? 'Deixar de observar' : 'Observar chamado' %>
+            </button>
+          </form>
+        </div>
+
+        <form action="/chamados/<%= chamado.id %>/atribuir" method="POST" class="form-select-acao">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <button type="submit" class="botao botao-secundario botao-bloco"><i class="fa-solid fa-hand"></i> Assumir chamado</button>
+          <label>Responsável</label>
+          <select name="responsavel_id" data-autosubmit>
+            <option value="">— Sem responsável —</option>
+            <% equipeDisponivel.forEach(t => { %>
+              <option value="<%= t.id %>" <%= chamado.responsavel_id === t.id ? 'selected' : '' %>><%= t.nome %><%= t.setor_nome ? ' (' + t.setor_nome + ')' : '' %></option>
+            <% }) %>
+          </select>
         </form>
-        <% } %>
 
         <form action="/chamados/<%= chamado.id %>/status" method="POST" class="form-select-acao">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <label>Alterar status</label>
-          <select name="status" onchange="this.form.submit()">
+          <label>Status</label>
+          <select name="status" data-autosubmit>
             <% Object.entries(STATUS_LABEL).forEach(([valor, label]) => { %>
               <option value="<%= valor %>" <%= chamado.status === valor ? 'selected' : '' %>><%= label %></option>
             <% }) %>
@@ -115,18 +189,18 @@
 
         <form action="/chamados/<%= chamado.id %>/prioridade" method="POST" class="form-select-acao">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
-          <label>Alterar prioridade</label>
-          <select name="prioridade" onchange="this.form.submit()">
-            <% ['baixa','media','alta','urgente'].forEach(p => { %>
-              <option value="<%= p %>" <%= chamado.prioridade === p ? 'selected' : '' %>><%= p %></option>
+          <label>Prioridade</label>
+          <select name="prioridade" data-autosubmit>
+            <% Object.entries(PRIORIDADE_LABEL).forEach(([valor, label]) => { %>
+              <option value="<%= valor %>" <%= chamado.prioridade === valor ? 'selected' : '' %>><%= label %></option>
             <% }) %>
           </select>
         </form>
       </div>
 
       <div class="card">
-        <h3>Transferir setor</h3>
-        <form action="/chamados/<%= chamado.id %>/transferir" method="POST">
+        <h3><i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir setor</h3>
+        <form action="/chamados/<%= chamado.id %>/transferir" method="POST" data-confirmar="Transferir o chamado? O responsável atual será removido.">
           <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <select name="novo_setor_id" required>
             <option value="">Selecione o novo setor...</option>
@@ -134,19 +208,19 @@
               <option value="<%= s.id %>"><%= s.nome %></option>
             <% }) %>
           </select>
-          <textarea name="motivo" rows="2" placeholder="Motivo da transferência (opcional)"></textarea>
-          <button type="submit" class="botao botao-secundario botao-bloco"><i class="fa-solid fa-arrow-right-arrow-left"></i> Transferir</button>
+          <textarea name="motivo" rows="2" maxlength="500" placeholder="Motivo da transferência (opcional)"></textarea>
+          <button type="submit" class="botao botao-secundario botao-bloco">Transferir</button>
         </form>
       </div>
 
     <% } %>
 
     <div class="card">
-      <h3>Histórico</h3>
+      <h3><i class="fa-solid fa-clock-rotate-left"></i> Histórico</h3>
       <ul class="lista-historico">
         <% historico.forEach(h => { %>
           <li>
-            <small><%= new Date(h.criado_em).toLocaleString('pt-BR') %></small>
+            <small><%= dataBr(h.criado_em) %></small>
             <p><%= h.descricao %></p>
           </li>
         <% }) %>

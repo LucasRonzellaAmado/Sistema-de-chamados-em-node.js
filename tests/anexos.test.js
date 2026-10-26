@@ -14,7 +14,7 @@ describe('anexos', () => {
     base = `http://localhost:${server.address().port}`;
     const idDono = idUsuario('cliente@empresa.com');
     h.criarUsuario({ nome: 'Outro Cliente', email: 'outro-anexo@teste.com' });
-    // Setor Financeiro (3): o agente do Suporte (davi) nao deve ter acesso
+    // Setor Financeiro (3): o tecnico do Suporte (davi) tambem tem acesso
     chamadoId = h.criarChamado({ setor_id: 3, cliente_id: idDono });
 
     cliente = new h.ClienteHttp(base);
@@ -62,9 +62,9 @@ describe('anexos', () => {
     assert.equal(r.status, 404);
   });
 
-  it('agente de outro setor nao baixa o anexo (404)', async () => {
+  it('tecnico de qualquer setor baixa o anexo (equipe compartilhada)', async () => {
     const r = await fetch(`${base}/anexos/${anexoId}`, { headers: { cookie: suporte.cookie } });
-    assert.equal(r.status, 404);
+    assert.equal(r.status, 200);
   });
 
   it('sem login, o download redireciona para o login', async () => {

@@ -37,11 +37,13 @@ describe('controle de acesso aos chamados', () => {
     assert.equal(r.status, 403);
   });
 
-  it('agente de outro setor nao muda status', async () => {
+  it('tecnico de outro setor tambem ajuda no chamado (modelo GLPI)', async () => {
     const agenteSuporte = new h.ClienteHttp(base);
     await agenteSuporte.logar('davi@empresa.com');
-    const r = await agenteSuporte.post(`/chamados/${chamadoFinanceiro}/status`, { status: 'fechado' });
-    assert.equal(r.status, 403);
+    const pagina = await agenteSuporte.abrir(`/chamados/${chamadoFinanceiro}`);
+    assert.equal(pagina.status, 200);
+    const r = await agenteSuporte.post(`/chamados/${chamadoFinanceiro}/mensagem`, { mensagem: 'posso ajudar' });
+    assert.equal(r.status, 302);
   });
 
   it('agente do proprio setor muda status', async () => {
@@ -51,10 +53,8 @@ describe('controle de acesso aos chamados', () => {
     assert.equal(r.status, 302);
   });
 
-  it('agente nao transfere chamado (somente admin)', async () => {
-    const agenteFin = new h.ClienteHttp(base);
-    await agenteFin.logar('financeiro@empresa.com');
-    const r = await agenteFin.post(`/chamados/${chamadoFinanceiro}/transferir`, { novo_setor_id: idSetor('Suporte') });
+  it('cliente nao transfere chamado (somente equipe)', async () => {
+    const r = await cliente.post(`/chamados/${chamadoFinanceiro}/transferir`, { novo_setor_id: idSetor('Suporte') });
     assert.equal(r.status, 403);
   });
 

@@ -1,23 +1,56 @@
-<% tituloPagina = usuarioLogado.tipo === 'cliente' ? 'Meus chamados' : 'Chamados do setor' %>
+<% const equipe = ehEquipe(usuarioLogado); %>
+<% tituloPagina = equipe ? VISOES[visao] : 'Meus chamados' %>
 <% secaoAtiva = 'lista' %>
 <%- include('../_header') %>
+<%
+  const montarUrl = (mudancas) => {
+    const p = new URLSearchParams();
+    const atual = { visao: visao !== 'todos' ? visao : '', status: filtroStatus || '', q: busca, ...mudancas };
+    Object.entries(atual).forEach(([k, v]) => { if (v) p.set(k, v); });
+    const qs = p.toString();
+    return '/chamados' + (qs ? '?' + qs : '');
+  };
+  const totalGeral = Object.values(contagem).reduce((a, b) => a + b, 0);
+  const ICONES = { aberto: 'fa-folder-open', em_andamento: 'fa-gears', aguardando_cliente: 'fa-hourglass-half', resolvido: 'fa-circle-check', fechado: 'fa-lock' };
+%>
 
 <div class="cabecalho-pagina">
-  <h1><%= usuarioLogado.tipo === 'cliente' ? 'Meus chamados' : 'Chamados do setor' %></h1>
-  <a href="/chamados/novo" class="botao botao-primario"><i class="fa-solid fa-plus"></i> Abrir novo chamado</a>
+  <div>
+    <h1><%= equipe ? 'Chamados' : 'Meus chamados' %></h1>
+    <p class="meta-chamado">
+      <%= equipe ? 'Toda a equipe vê e pode ajudar em qualquer chamado.' : 'Acompanhe aqui os chamados que você abriu.' %>
+      <% if (busca) { %> · Busca: <strong>"<%= busca %>"</strong> <a href="<%= montarUrl({ q: '' }) %>">limpar</a><% } %>
+    </p>
+  </div>
+  <a href="/chamados/novo" class="botao botao-primario"><i class="fa-solid fa-plus"></i> Abrir chamado</a>
 </div>
 
-<div class="filtros">
-  <a href="/chamados" class="filtro <%= !filtroStatus ? 'ativo' : '' %>">Todos</a>
-  <a href="/chamados?status=aberto" class="filtro <%= filtroStatus === 'aberto' ? 'ativo' : '' %>">Abertos</a>
-  <a href="/chamados?status=em_andamento" class="filtro <%= filtroStatus === 'em_andamento' ? 'ativo' : '' %>">Em andamento</a>
-  <a href="/chamados?status=aguardando_cliente" class="filtro <%= filtroStatus === 'aguardando_cliente' ? 'ativo' : '' %>">Aguardando cliente</a>
-  <a href="/chamados?status=resolvido" class="filtro <%= filtroStatus === 'resolvido' ? 'ativo' : '' %>">Resolvidos</a>
-  <a href="/chamados?status=fechado" class="filtro <%= filtroStatus === 'fechado' ? 'ativo' : '' %>">Fechados</a>
+<div class="painel-contadores">
+  <a href="<%= montarUrl({ status: '' }) %>" class="contador <%= !filtroStatus ? 'ativo' : '' %>">
+    <i class="fa-solid fa-layer-group"></i>
+    <div><strong><%= totalGeral %></strong><span>Total</span></div>
+  </a>
+  <% Object.entries(STATUS_LABEL).forEach(([valor, label]) => { %>
+    <a href="<%= montarUrl({ status: valor }) %>" class="contador contador-<%= valor %> <%= filtroStatus === valor ? 'ativo' : '' %>">
+      <i class="fa-solid <%= ICONES[valor] %>"></i>
+      <div><strong><%= contagem[valor] %></strong><span><%= label %></span></div>
+    </a>
+  <% }) %>
 </div>
+
+<% if (equipe) { %>
+<div class="filtros">
+  <% Object.entries(VISOES).forEach(([valor, label]) => { %>
+    <a href="<%= montarUrl({ visao: valor === 'todos' ? '' : valor }) %>" class="filtro <%= visao === valor ? 'ativo' : '' %>"><%= label %></a>
+  <% }) %>
+</div>
+<% } %>
 
 <% if (chamados.length === 0) { %>
-  <p class="vazio">Nenhum chamado encontrado.</p>
+  <div class="estado-vazio">
+    <i class="fa-regular fa-folder-open"></i>
+    <p>Nenhum chamado encontrado.</p>
+  </div>
 <% } else { %>
 <div class="tabela-wrapper">
   <table class="tabela">
@@ -26,32 +59,32 @@
         <th>Protocolo</th>
         <th>Assunto</th>
         <th>Setor</th>
-        <% if (usuarioLogado.tipo !== 'cliente') { %><th>Cliente</th><% } %>
+        <% if (equipe) { %><th>Solicitante</th><% } %>
         <th>Responsável</th>
         <th>Prioridade</th>
         <th>Status</th>
-        <% if (usuarioLogado.tipo === 'admin') { %>
+        <% if (equipe) { %>
           <th>Tempo p/ assumir</th>
           <th>Tempo total</th>
         <% } %>
-        <th>Atualizado em</th>
+        <th>Atualizado</th>
       </tr>
     </thead>
     <tbody>
       <% chamados.forEach(c => { %>
-        <tr onclick="window.location='/chamados/<%= c.id %>'" class="linha-clicavel">
-          <td><strong><%= c.protocolo %></strong></td>
-          <td><%= c.titulo %></td>
+        <tr data-href="/chamados/<%= c.id %>" class="linha-clicavel">
+          <td><a href="/chamados/<%= c.id %>" class="protocolo"><%= c.protocolo %></a></td>
+          <td class="celula-assunto"><%= c.titulo %></td>
           <td><%= c.setor_nome %></td>
-          <% if (usuarioLogado.tipo !== 'cliente') { %><td><%= c.cliente_nome %></td><% } %>
+          <% if (equipe) { %><td><%= c.cliente_nome %></td><% } %>
           <td><%= c.responsavel_nome || '—' %></td>
-          <td><span class="etiqueta prioridade-<%= c.prioridade %>"><%= c.prioridade %></span></td>
+          <td><span class="etiqueta prioridade-<%= c.prioridade %>"><%= PRIORIDADE_LABEL[c.prioridade] %></span></td>
           <td><span class="etiqueta status-<%= c.status %>"><%= STATUS_LABEL[c.status] %></span></td>
-          <% if (usuarioLogado.tipo === 'admin') { %>
+          <% if (equipe) { %>
             <td><%= c.tempoParaAssumir || '—' %></td>
             <td><%= c.tempoTotal %></td>
           <% } %>
-          <td><%= new Date(c.atualizado_em).toLocaleString('pt-BR') %></td>
+          <td class="texto-suave"><%= new Date(c.atualizado_em.replace(' ', 'T') + 'Z').toLocaleString('pt-BR') %></td>
         </tr>
       <% }) %>
     </tbody>
