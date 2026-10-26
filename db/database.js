@@ -1,7 +1,7 @@
 const { DatabaseSync } = require('node:sqlite');
-const path = require('path');
+const config = require('../config');
 
-const db = new DatabaseSync(path.join(__dirname, 'chamados.db'));
+const db = new DatabaseSync(config.dbPath);
 
 db.exec('PRAGMA foreign_keys = ON;');
 
@@ -81,6 +81,28 @@ db.exec(`
     FOREIGN KEY (chamado_id) REFERENCES chamados(id),
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
   );
+
+  -- Observadores (como no GLPI): membros da equipe que acompanham o chamado
+  CREATE TABLE IF NOT EXISTS chamado_observadores (
+    chamado_id INTEGER NOT NULL,
+    usuario_id INTEGER NOT NULL,
+    criado_em TEXT DEFAULT (datetime('now')),
+    PRIMARY KEY (chamado_id, usuario_id),
+    FOREIGN KEY (chamado_id) REFERENCES chamados(id),
+    FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
+  );
 `);
+
+// Migracoes simples para bancos criados antes destas colunas existirem
+function adicionarColunaSeFaltar(tabela, coluna, definicao) {
+  const colunas = db.prepare(`PRAGMA table_info(${tabela})`).all().map(c => c.name);
+  if (!colunas.includes(coluna)) db.exec(`ALTER TABLE ${tabela} ADD COLUMN ${coluna} ${definicao}`);
+}
+
+// tipo da mensagem: 'acompanhamento' (publica), 'nota' (privada da equipe) ou 'solucao'
+adicionarColunaSeFaltar('mensagens', 'tipo', "TEXT NOT NULL DEFAULT 'acompanhamento'");
+// anexo enviado junto de uma mensagem herda a visibilidade dela
+adicionarColunaSeFaltar('anexos', 'mensagem_id', 'INTEGER REFERENCES mensagens(id)');
+db.exec("UPDATE mensagens SET tipo = 'nota' WHERE interna = 1 AND tipo = 'acompanhamento'");
 
 module.exports = db;

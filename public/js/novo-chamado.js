@@ -1,3 +1,4 @@
+const TODOS_ASSUNTOS = JSON.parse(document.getElementById('dados-assuntos').textContent);
 const seletorSetor = document.getElementById('setor_id');
 const seletorAssunto = document.getElementById('assunto_predefinido');
 const campoCustomizado = document.getElementById('campo-assunto-customizado');
@@ -20,15 +21,11 @@ seletorSetor.addEventListener('change', () => {
   opcaoOutro.textContent = 'Outro assunto (descrever abaixo)';
   seletorAssunto.appendChild(opcaoOutro);
 
-  campoCustomizado.style.display = 'none';
+  campoCustomizado.hidden = true;
 });
 
 seletorAssunto.addEventListener('change', () => {
-  if (seletorAssunto.value === 'outro') {
-    campoCustomizado.style.display = 'block';
-    inputCustomizado.required = true;
-  } else {
-    campoCustomizado.style.display = 'none';
-    inputCustomizado.required = false;
-  }
+  const outro = seletorAssunto.value === 'outro';
+  campoCustomizado.hidden = !outro;
+  inputCustomizado.required = outro;
 });
